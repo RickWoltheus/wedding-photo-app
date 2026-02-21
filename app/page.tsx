@@ -1,7 +1,8 @@
 "use client";
 
-import { Sun, Crosshair, Brush, Smartphone } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Sun, Crosshair, Brush, Smartphone, Images, ChevronLeft } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Stack from "./components/Stack";
 
 type Prompt = {
   id: string;
@@ -118,6 +119,77 @@ function TipsScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
+function PhotoStack({
+  prompts,
+  previews,
+  onClose,
+  isModal,
+}: {
+  prompts: Prompt[];
+  previews: (string | null)[];
+  onClose?: () => void;
+  isModal?: boolean;
+}) {
+  const cards = useMemo(() => {
+    const n = prompts.length;
+    return prompts.map((_, reverseI) => {
+      const i = n - 1 - reverseI;
+      const prompt = prompts[i];
+      const url = previews[i];
+      if (url) {
+        return (
+          <img
+            key={i}
+            src={url}
+            alt=""
+            className="w-full h-full object-cover pointer-events-none"
+          />
+        );
+      }
+      return (
+        <div
+          key={i}
+          className="w-full h-full flex flex-col items-center justify-center p-6 bg-wedding-light text-gray-600 text-center"
+        >
+          <p className="text-sm font-medium text-wedding-dark">{prompt.title}</p>
+          <p className="text-xs mt-1">{prompt.description}</p>
+        </div>
+      );
+    });
+  }, [prompts, previews]);
+
+  return (
+    <div className="relative w-full" style={{ paddingTop: "100%", maxHeight: isModal ? "70vh" : undefined }}>
+      <div className="absolute inset-0 mx-auto flex items-center justify-center" style={{ maxWidth: 280 }}>
+        <div className="w-full h-full min-h-[280px]" style={{ width: 208, height: 280 }}>
+          <Stack
+            randomRotation={false}
+            sensitivity={200}
+            sendToBackOnClick
+            cards={cards}
+            autoplay={false}
+            autoplayDelay={3000}
+            pauseOnHover={false}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-center gap-1 mt-3 text-wedding-dark">
+        <ChevronLeft className="w-5 h-5 flex-shrink-0" />
+        <span className="text-xs font-medium">Sleep of tik om door je foto&apos;s te bladeren</span>
+      </div>
+      {isModal && onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 w-full py-2 text-sm text-gray-600 hover:text-gray-900"
+        >
+          Sluiten
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PromptFlow({
   prompt,
   currentIndex,
@@ -128,6 +200,7 @@ function PromptFlow({
   onUpload,
   isUploading,
   uploadError,
+  onOpenStack,
 }: {
   prompt: Prompt;
   currentIndex: number;
@@ -138,15 +211,28 @@ function PromptFlow({
   onUpload: () => void;
   isUploading: boolean;
   uploadError: string | null;
+  onOpenStack: () => void;
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <header className="space-y-1">
-        <p className="text-xs font-medium text-wedding-dark uppercase tracking-wide">
-          Opdracht {currentIndex + 1} van {total}
-        </p>
-        <h2 className="text-xl font-semibold text-gray-900">{prompt.title}</h2>
-        <p className="text-sm text-gray-700">{prompt.description}</p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-wedding-dark uppercase tracking-wide">
+              Opdracht {currentIndex + 1} van {total}
+            </p>
+            <h2 className="text-xl font-semibold text-gray-900">{prompt.title}</h2>
+            <p className="text-sm text-gray-700">{prompt.description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenStack}
+            className="flex-shrink-0 p-2 rounded-xl bg-wedding-light text-wedding-dark hover:bg-wedding transition-colors"
+            title="Bekijk foto's"
+          >
+            <Images className="w-5 h-5" />
+          </button>
+        </div>
       </header>
       <section className="space-y-4">
         {selectedFile && previewUrl ? (
@@ -185,19 +271,25 @@ function PromptFlow({
 }
 
 function FinishedScreen({
+  prompts,
+  previews,
   email,
   selfDescription,
   onEmailChange,
   onSelfDescriptionChange,
   onSubmitEmail,
   emailSubmitted,
+  onOpenStack,
 }: {
+  prompts: Prompt[];
+  previews: (string | null)[];
   email: string;
   selfDescription: string;
   onEmailChange: (v: string) => void;
   onSelfDescriptionChange: (v: string) => void;
   onSubmitEmail: (e: React.FormEvent) => void;
   emailSubmitted: boolean;
+  onOpenStack: () => void;
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
@@ -207,6 +299,17 @@ function FinishedScreen({
           Jij hebt meegeholpen om onze dag vast te leggen. Dat waarderen we enorm.
         </p>
       </header>
+      <section>
+        <PhotoStack prompts={prompts} previews={previews} />
+        <button
+          type="button"
+          onClick={onOpenStack}
+          className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-wedding text-wedding-dark text-sm font-medium hover:bg-wedding-light"
+        >
+          <Images className="w-4 h-4" />
+          Alle foto&apos;s bekijken
+        </button>
+      </section>
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-gray-900 text-center">Foto&apos;s van jezelf ontvangen?</h3>
         {emailSubmitted ? (
@@ -260,8 +363,15 @@ export default function WeddingPhotoPage() {
   const [email, setEmail] = useState("");
   const [selfDescription, setSelfDescription] = useState("");
   const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [uploadedPreviews, setUploadedPreviews] = useState<(string | null)[]>([]);
+  const [stackModalOpen, setStackModalOpen] = useState(false);
+  const storedUrlsRef = useRef<string[]>([]);
 
   const promptsForSession = useMemo(() => shuffleArray(PROMPTS).slice(0, 10), []);
+
+  useEffect(() => {
+    setUploadedPreviews((prev) => (prev.length === promptsForSession.length ? prev : new Array(promptsForSession.length).fill(null)));
+  }, [promptsForSession.length]);
 
   useEffect(() => {
     setSessionId(getSessionId());
@@ -278,6 +388,13 @@ export default function WeddingPhotoPage() {
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
 
+  useEffect(() => {
+    return () => {
+      storedUrlsRef.current.forEach(URL.revokeObjectURL);
+      storedUrlsRef.current = [];
+    };
+  }, []);
+
   const currentPrompt = promptsForSession[currentIndex];
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -291,6 +408,7 @@ export default function WeddingPhotoPage() {
 
   async function handleUpload() {
     if (!selectedFile || !currentPrompt) return;
+    const fileToStore = selectedFile;
     setIsUploading(true);
     setUploadError(null);
     try {
@@ -300,6 +418,14 @@ export default function WeddingPhotoPage() {
       formData.append("promptId", currentPrompt.id);
       const res = await fetch("/api/upload-photo", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload mislukt");
+      const url = URL.createObjectURL(fileToStore);
+      storedUrlsRef.current.push(url);
+      setUploadedPreviews((prev) => {
+        const next = [...prev];
+        if (next.length !== promptsForSession.length) return next;
+        next[currentIndex] = url;
+        return next;
+      });
       setSelectedFile(null);
       if (currentIndex + 1 >= promptsForSession.length) setStep("finished");
       else setCurrentIndex((i) => i + 1);
@@ -343,19 +469,42 @@ export default function WeddingPhotoPage() {
             onUpload={handleUpload}
             isUploading={isUploading}
             uploadError={uploadError}
+            onOpenStack={() => setStackModalOpen(true)}
           />
         )}
         {step === "finished" && (
           <FinishedScreen
+            prompts={promptsForSession}
+            previews={uploadedPreviews.length === promptsForSession.length ? uploadedPreviews : new Array(promptsForSession.length).fill(null)}
             email={email}
             selfDescription={selfDescription}
             onEmailChange={setEmail}
             onSelfDescriptionChange={setSelfDescription}
             onSubmitEmail={handleSubmitEmail}
             emailSubmitted={emailSubmitted}
+            onOpenStack={() => setStackModalOpen(true)}
           />
         )}
       </div>
+      {stackModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          onClick={() => setStackModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-sm w-full max-h-[90vh] overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-4">Jouw foto&apos;s</h3>
+            <PhotoStack
+              prompts={promptsForSession}
+              previews={uploadedPreviews.length === promptsForSession.length ? uploadedPreviews : new Array(promptsForSession.length).fill(null)}
+              isModal
+              onClose={() => setStackModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

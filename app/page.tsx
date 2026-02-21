@@ -1,5 +1,6 @@
 "use client";
 
+import { Sun, Crosshair, Brush, Smartphone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Prompt = {
@@ -38,9 +39,23 @@ function getSessionId(): string {
   return newId;
 }
 
-type Step = "onboarding" | "taking" | "finished";
+type Step = "onboarding" | "tips" | "taking" | "finished";
 
-function OnboardingCard({ onStart }: { onStart: () => void }) {
+const TIP_ICONS = {
+  light: Sun,
+  focus: Crosshair,
+  lens: Brush,
+  hands: Smartphone,
+};
+
+const TIPS: { key: keyof typeof TIP_ICONS; text: string }[] = [
+  { key: "light", text: "Zorg voor licht van voren (niet met een raam recht achter iemand)." },
+  { key: "focus", text: "Tik op het gezicht op je scherm om scherp te stellen." },
+  { key: "lens", text: "Houd je lens even schoon met je trui of doekje." },
+  { key: "hands", text: "Houd je telefoon met twee handen voor een stabiele foto." },
+];
+
+function OnboardingCard({ onNext }: { onNext: () => void }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <header className="space-y-2">
@@ -58,15 +73,37 @@ function OnboardingCard({ onStart }: { onStart: () => void }) {
           <li>Daarna zie je de volgende opdracht, totdat je klaar bent.</li>
         </ul>
       </section>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-900">Tips voor mooie telefoonfoto&apos;s</h2>
-        <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-          <li>Zorg voor licht van voren (niet met een raam recht achter iemand).</li>
-          <li>Tik op het gezicht op je scherm om scherp te stellen.</li>
-          <li>Houd je lens even schoon met je trui of doekje.</li>
-          <li>Houd je telefoon met twee handen voor een stabiele foto.</li>
-        </ul>
-      </section>
+      <button
+        type="button"
+        onClick={onNext}
+        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+      >
+        Volgende
+      </button>
+    </div>
+  );
+}
+
+function TipsScreen({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
+      <header className="text-center space-y-1">
+        <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">Tips</p>
+        <h2 className="text-xl font-semibold text-gray-900">Mooie telefoonfoto&apos;s</h2>
+      </header>
+      <ul className="space-y-4">
+        {TIPS.map(({ key, text }) => {
+          const Icon = TIP_ICONS[key];
+          return (
+            <li key={key} className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-wedding-light text-wedding-dark flex items-center justify-center p-3">
+                <Icon className="w-7 h-7" strokeWidth={1.5} />
+              </div>
+              <p className="text-sm text-gray-700 pt-2 flex-1">{text}</p>
+            </li>
+          );
+        })}
+      </ul>
       <button
         type="button"
         onClick={onStart}
@@ -293,7 +330,8 @@ export default function WeddingPhotoPage() {
   return (
     <main className="min-h-screen bg-wedding-light flex flex-col items-center px-4 py-6">
       <div className="w-full max-w-md">
-        {step === "onboarding" && <OnboardingCard onStart={() => setStep("taking")} />}
+        {step === "onboarding" && <OnboardingCard onNext={() => setStep("tips")} />}
+        {step === "tips" && <TipsScreen onStart={() => setStep("taking")} />}
         {step === "taking" && currentPrompt && (
           <PromptFlow
             prompt={currentPrompt}

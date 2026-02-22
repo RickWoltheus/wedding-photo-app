@@ -8,6 +8,7 @@ const ONBOARDING_STEPS: Tour[] = [
     tour: "takingTour",
     steps: [
       {
+        icon: null,
         title: "De opdracht",
         content:
           "Hier staat steeds welke foto je moet maken. Volg de opdracht en maak een foto.",
@@ -17,6 +18,7 @@ const ONBOARDING_STEPS: Tour[] = [
         showSkip: true,
       },
       {
+        icon: null,
         title: "Foto maken",
         content: "Tik hier om een foto te maken met je telefoon.",
         selector: "#onboarding-maak-foto",
@@ -30,6 +32,7 @@ const ONBOARDING_STEPS: Tour[] = [
     tour: "stackTour",
     steps: [
       {
+        icon: null,
         title: "Je foto's",
         content:
           "Sleep of tik om door je geprinte foto's te bladeren. Tik op een polaroid om hem fullscreen te bekijken.",
@@ -44,6 +47,7 @@ const ONBOARDING_STEPS: Tour[] = [
     tour: "previewTour",
     steps: [
       {
+        icon: null,
         title: "Preview",
         content:
           "Tik op de preview of op een polaroid in de stapel om de foto fullscreen te bekijken. Geen goede foto? Gebruik het reset-icoon naast Upload om een andere te nemen.",

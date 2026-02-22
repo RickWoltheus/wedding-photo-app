@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import { useNextStep } from "nextstepjs";
 import {
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -657,7 +658,7 @@ function AccessGateScreen({
   );
 }
 
-export default function WeddingPhotoPage() {
+function WeddingPhotoPage() {
   const searchParams = useSearchParams();
   const [accessChecked, setAccessChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
@@ -990,5 +991,19 @@ export default function WeddingPhotoPage() {
         index={lightboxIndex}
       />
     </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <main className="main-page bg-wedding-light min-h-screen flex items-center justify-center">
+          <div className="text-sm text-gray-500">Laden...</div>
+        </main>
+      }
+    >
+      <WeddingPhotoPage />
+    </Suspense>
   );
 }

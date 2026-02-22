@@ -15,7 +15,7 @@ export async function GET() {
   }
   const url = `${baseUrl.replace(/\/$/, "")}?code=${encodeURIComponent(code)}`;
   const png = await QRCode.toBuffer(url, { type: "png", width: 400, margin: 2 });
-  return new NextResponse(png, {
+  return new NextResponse(new Uint8Array(png), {
     headers: {
       "Content-Type": "image/png",
       "Content-Disposition": "inline; filename=wedding-photo-qr.png",

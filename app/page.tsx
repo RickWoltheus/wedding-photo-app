@@ -1,6 +1,6 @@
 "use client";
 
-import { Brush, Crosshair, RotateCcw, Smartphone, Sun } from "lucide-react";
+import { Focus, Hand, RotateCcw, Sparkles, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import { useNextStep } from "nextstepjs";
@@ -127,11 +127,20 @@ function getSessionId(): string {
 
 type Step = "onboarding" | "tips" | "taking" | "finished";
 
+function TwoHandsIcon({ className }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center justify-center gap-0.5 ${className ?? ""}`}>
+      <Hand className="w-[48%] h-full" strokeWidth={1.5} />
+      <Hand className="w-[48%] h-full scale-x-[-1]" strokeWidth={1.5} />
+    </span>
+  );
+}
+
 const TIP_ICONS = {
   light: Sun,
-  focus: Crosshair,
-  lens: Brush,
-  hands: Smartphone,
+  focus: Focus,
+  lens: Sparkles,
+  hands: TwoHandsIcon,
 };
 
 const TIPS: { key: keyof typeof TIP_ICONS; text: string }[] = [
@@ -152,22 +161,25 @@ const TIPS: { key: keyof typeof TIP_ICONS; text: string }[] = [
 
 function OnboardingCard({ onNext }: { onNext: () => void }) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
-      <header className="space-y-2">
+    <div className="w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-lg border-2 border-gray-200/80 p-8 space-y-6">
+      <header className="space-y-3">
         <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">
           Onze bruiloft
         </p>
-        <h1 className="text-2xl font-semibold text-gray-900">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 leading-tight">
           Help ons de dag vast te leggen
         </h1>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm sm:text-base text-gray-600 max-w-prose">
           We hebben geen officiële fotograaf. Jij kunt ons helpen door een paar
           speciale foto&apos;s te maken met je telefoon.
         </p>
+        <p className="text-xs text-gray-500 pt-1">
+          Dit appje is door <strong>Rick</strong> gebouwd voor onze bruiloft.
+        </p>
       </header>
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-gray-900">Hoe werkt het?</h2>
-        <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+        <h2 className="text-base font-semibold text-gray-900">Hoe werkt het?</h2>
+        <ul className="list-disc list-inside text-sm text-gray-700 space-y-2 max-w-prose">
           <li>Je krijgt maximaal 10 korte &quot;foto-opdrachten&quot;.</li>
           <li>Maak een foto per opdracht en upload deze direct.</li>
           <li>Daarna zie je de volgende opdracht, totdat je klaar bent.</li>
@@ -176,7 +188,7 @@ function OnboardingCard({ onNext }: { onNext: () => void }) {
       <button
         type="button"
         onClick={onNext}
-        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3.5 text-sm font-semibold hover:bg-wedding transition-colors"
       >
         Volgende
       </button>
@@ -186,24 +198,24 @@ function OnboardingCard({ onNext }: { onNext: () => void }) {
 
 function TipsScreen({ onStart }: { onStart: () => void }) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
-      <header className="text-center space-y-1">
+    <div className="w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-xl border-2 border-gray-200/80 p-8 space-y-6">
+      <header className="text-center space-y-2">
         <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">
           Tips
         </p>
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
           Mooie telefoonfoto&apos;s
         </h2>
       </header>
-      <ul className="space-y-4">
+      <ul className="grid sm:grid-cols-2 gap-4">
         {TIPS.map(({ key, text }) => {
           const Icon = TIP_ICONS[key];
           return (
             <li key={key} className="flex gap-4 items-start">
-              <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-wedding-light text-wedding-dark flex items-center justify-center p-3">
-                <Icon className="w-7 h-7" strokeWidth={1.5} />
+              <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-wedding-light text-wedding-dark flex items-center justify-center p-2.5 sm:p-3">
+                <Icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.5} />
               </div>
-              <p className="text-sm text-gray-700 pt-2 flex-1">{text}</p>
+              <p className="text-sm text-gray-700 pt-1.5 sm:pt-2 flex-1">{text}</p>
             </li>
           );
         })}
@@ -211,7 +223,7 @@ function TipsScreen({ onStart }: { onStart: () => void }) {
       <button
         type="button"
         onClick={onStart}
-        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3.5 text-sm font-semibold hover:bg-wedding transition-colors"
       >
         Start met foto&apos;s maken
       </button>
@@ -499,7 +511,7 @@ function PromptFlow({
   );
 }
 
-const FINISHED_CARD_HEIGHT = 420;
+const FINISHED_CARD_HEIGHT = 400;
 
 function FinishedScreen({
   printedUrls,
@@ -525,87 +537,102 @@ function FinishedScreen({
   onEmailFormStepNext: () => void;
 }) {
   return (
-    <div className="w-full max-w-[280px] mx-auto flex flex-col items-center gap-6">
+    <div className="w-full max-w-md mx-auto flex flex-col items-center gap-6">
       <div
-        className="w-full bg-white rounded-[2rem] shadow-lg border-2 border-gray-200/80 overflow-hidden p-6 flex flex-col"
-        style={{ height: FINISHED_CARD_HEIGHT }}
+        className="w-full bg-white rounded-[2rem] shadow-xl border-2 border-gray-200/80 overflow-hidden flex flex-col flex-shrink-0"
+        style={{
+          height: FINISHED_CARD_HEIGHT,
+          maxHeight: FINISHED_CARD_HEIGHT,
+        }}
       >
-        <header className="space-y-2 text-center flex-shrink-0">
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Dankjewel voor je foto&apos;s!
-          </h2>
-          <p className="text-sm text-gray-700">
-            Jij hebt meegeholpen om onze dag vast te leggen. Dat waarderen we
-            enorm.
-          </p>
-        </header>
-        <section className="flex-1 flex flex-col min-h-0 mt-4">
-          <h3 className="text-sm font-semibold text-gray-900 text-center flex-shrink-0">
-            Foto&apos;s van jezelf ontvangen?
-          </h3>
-          {emailSubmitted ? (
-            <p className="text-sm text-green-700 text-center py-4">
-              Dankjewel! We gebruiken je gegevens om later foto&apos;s met jou
-              te delen.
+        <div className="p-6 sm:p-8 flex flex-col h-full min-h-0 overflow-y-auto">
+          <header className="space-y-2 text-center flex-shrink-0">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
+              Dankjewel voor je foto&apos;s!
+            </h2>
+            <p className="text-sm text-gray-700">
+              Jij hebt meegeholpen om onze dag vast te leggen.
             </p>
-          ) : emailFormStep === 1 ? (
-            <form
-              className="flex-1 flex flex-col justify-between min-h-0 pt-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                onEmailFormStepNext();
-              }}
-            >
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  E-mailadres (optioneel)
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => onEmailChange(e.target.value)}
-                  placeholder="jij@example.com"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark focus:border-transparent"
-                />
+          </header>
+          <section className="flex-1 flex flex-col min-h-0 mt-4">
+            <h3 className="text-sm font-semibold text-gray-900 text-center flex-shrink-0">
+              Foto&apos;s van jezelf ontvangen?
+            </h3>
+            {emailSubmitted ? (
+              <div className="space-y-4 pt-3 flex-1 flex flex-col max-w-prose mx-auto text-center">
+                <p className="text-sm text-green-700">
+                  Dankjewel! We gebruiken je gegevens om later foto&apos;s met
+                  jou te delen.
+                </p>
+                <div className="text-xs text-gray-600 pt-3 border-t border-gray-200">
+                  <p className="font-medium text-gray-700 mb-1">
+                    Ook zo&apos;n app voor jouw bruiloft of event?
+                  </p>
+                  <p>
+                    Neem contact op met Rick, dan bouwt hij het appje om naar
+                    jouw style.
+                  </p>
+                </div>
               </div>
-              <button
-                type="submit"
-                className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+            ) : emailFormStep === 1 ? (
+              <form
+                className="flex-1 flex flex-col justify-between min-h-0 pt-4 max-w-sm mx-auto w-full"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onEmailFormStepNext();
+                }}
               >
-                Volgende
-              </button>
-            </form>
-          ) : (
-            <form
-              className="flex-1 flex flex-col justify-between min-h-0 pt-3"
-              onSubmit={onSubmitEmail}
-            >
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-700">
-                  Hoe herken je jou op de foto? (optioneel)
-                </label>
-                <textarea
-                  value={selfDescription}
-                  onChange={(e) => onSelfDescriptionChange(e.target.value)}
-                  placeholder="Bijv. Rick, blauwe jurk, bril"
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark focus:border-transparent resize-none"
-                />
-              </div>
-              <div className="space-y-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    E-mailadres (optioneel)
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => onEmailChange(e.target.value)}
+                    placeholder="jij@example.com"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark focus:border-transparent"
+                  />
+                </div>
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+                  className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors mt-3"
                 >
-                  Verstuur
+                  Volgende
                 </button>
-                <p className="text-xs text-gray-500 text-center">
-                  Alleen om foto&apos;s met jou te delen.
-                </p>
-              </div>
-            </form>
-          )}
-        </section>
+              </form>
+            ) : (
+              <form
+                className="flex-1 flex flex-col justify-between min-h-0 pt-4 max-w-sm mx-auto w-full"
+                onSubmit={onSubmitEmail}
+              >
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Hoe herken je jou op de foto? (optioneel)
+                  </label>
+                  <input
+                    type="text"
+                    value={selfDescription}
+                    onChange={(e) => onSelfDescriptionChange(e.target.value)}
+                    placeholder="Bijv. Rick, blauwe jurk, bril"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark focus:border-transparent"
+                  />
+                </div>
+                <div className="space-y-2 mt-3">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding transition-colors"
+                  >
+                    Verstuur
+                  </button>
+                  <p className="text-[11px] text-gray-500 text-center">
+                    Alleen om foto&apos;s met jou te delen.
+                  </p>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
       </div>
       <section className="w-full flex justify-center">
         <PhotoStack printedUrls={printedUrls} onCardClick={onPolaroidClick} />
@@ -623,11 +650,9 @@ function AccessGateScreen({
 }) {
   const [code, setCode] = useState("");
   return (
-    <div className="w-full max-w-[280px] mx-auto bg-white rounded-[2rem] shadow-lg border-2 border-gray-200/80 p-6 text-center space-y-4">
-      <h2 className="text-xl font-semibold text-gray-900">
-        Scan de QR-code
-      </h2>
-      <p className="text-sm text-gray-700">
+    <div className="w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-xl border-2 border-gray-200/80 p-8 text-center space-y-5">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Scan de QR-code</h2>
+      <p className="text-sm text-gray-700 max-w-prose mx-auto">
         Scan de QR-code op de trouwlocatie om toegang te krijgen.
       </p>
       <p className="text-xs text-gray-600">Of voer de code in:</p>
@@ -636,19 +661,19 @@ function AccessGateScreen({
           e.preventDefault();
           onCodeSubmit(code.trim());
         }}
-        className="space-y-2"
+        className="space-y-3 max-w-xs mx-auto"
       >
         <input
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="Toegangscode"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wedding-dark"
           autoComplete="off"
         />
         <button
           type="submit"
-          className="w-full rounded-full bg-wedding-dark text-white py-2.5 text-sm font-semibold hover:bg-wedding"
+          className="w-full rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold hover:bg-wedding"
         >
           Doorgaan
         </button>
@@ -738,7 +763,10 @@ function WeddingPhotoPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) setHasAccess(true);
-    else setAccessError(data.error === "Invalid code" ? "Ongeldige code" : "Er ging iets mis");
+    else
+      setAccessError(
+        data.error === "Invalid code" ? "Ongeldige code" : "Er ging iets mis",
+      );
   }
 
   useEffect(() => {
@@ -862,15 +890,21 @@ function WeddingPhotoPage() {
 
   if (!accessChecked) {
     return (
-      <main className="main-page bg-wedding-light min-h-screen flex items-center justify-center">
-        <div className="text-sm text-gray-500">Laden...</div>
+      <main className="main-page bg-wedding-light min-h-screen flex items-center justify-center px-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-wedding-dark border-t-transparent animate-spin" />
+          <span className="text-sm text-gray-600">Laden...</span>
+        </div>
       </main>
     );
   }
   if (!hasAccess) {
     return (
       <main className="main-page bg-wedding-light min-h-screen flex flex-col items-center justify-center px-4">
-        <AccessGateScreen onCodeSubmit={handleAccessCodeSubmit} error={accessError} />
+        <AccessGateScreen
+          onCodeSubmit={handleAccessCodeSubmit}
+          error={accessError}
+        />
       </main>
     );
   }
@@ -998,8 +1032,11 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <main className="main-page bg-wedding-light min-h-screen flex items-center justify-center">
-          <div className="text-sm text-gray-500">Laden...</div>
+        <main className="main-page bg-wedding-light min-h-screen flex items-center justify-center px-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-wedding-dark border-t-transparent animate-spin" />
+            <span className="text-sm text-gray-600">Laden...</span>
+          </div>
         </main>
       }
     >

@@ -30,47 +30,47 @@ const PROMPTS: Prompt[] = [
     description:
       "Maak een foto van ons (het bruidspaar) vanaf de plek waar je nu staat.",
   },
-  // {
-  //   id: "laughing-guest",
-  //   title: "Iemand die lacht",
-  //   description:
-  //     "Maak een spontane foto van iemand die hardop lacht of een grote glimlach heeft.",
-  // },
-  // {
-  //   id: "venue-wide",
-  //   title: "De locatie",
-  //   description:
-  //     "Maak een overzichtsfoto van de trouwlocatie of de ruimte waar je nu bent.",
-  // },
-  // {
-  //   id: "details",
-  //   title: "Een mooi detail",
-  //   description:
-  //     "Zoom in op een detail dat jij mooi vindt (bloemen, ringen, decoratie, etc.).",
-  // },
-  // {
-  //   id: "table",
-  //   title: "Jouw tafel",
-  //   description:
-  //     "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop).",
-  // },
-  // {
-  //   id: "dancefloor",
-  //   title: "Dansvloer",
-  //   description: "Maak een foto van de dansvloer of mensen die dansen.",
-  // },
-  // {
-  //   id: "selfie-new",
-  //   title: "Selfie met iemand nieuws",
-  //   description:
-  //     "Maak een selfie met iemand die je vandaag voor het eerst hebt ontmoet.",
-  // },
-  // {
-  //   id: "candid-couple",
-  //   title: "Onopvallende foto van ons",
-  //   description:
-  //     "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt).",
-  // },
+  {
+    id: "laughing-guest",
+    title: "Iemand die lacht",
+    description:
+      "Maak een spontane foto van iemand die hardop lacht of een grote glimlach heeft.",
+  },
+  {
+    id: "venue-wide",
+    title: "De locatie",
+    description:
+      "Maak een overzichtsfoto van de trouwlocatie of de ruimte waar je nu bent.",
+  },
+  {
+    id: "details",
+    title: "Een mooi detail",
+    description:
+      "Zoom in op een detail dat jij mooi vindt (bloemen, ringen, decoratie, etc.).",
+  },
+  {
+    id: "table",
+    title: "Jouw tafel",
+    description:
+      "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop).",
+  },
+  {
+    id: "dancefloor",
+    title: "Dansvloer",
+    description: "Maak een foto van de dansvloer of mensen die dansen.",
+  },
+  {
+    id: "selfie-new",
+    title: "Selfie met iemand nieuws",
+    description:
+      "Maak een selfie met iemand die je vandaag voor het eerst hebt ontmoet.",
+  },
+  {
+    id: "candid-couple",
+    title: "Onopvallende foto van ons",
+    description:
+      "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt).",
+  },
 ];
 
 const STACK_CARD_WIDTH = 268;
@@ -129,7 +129,9 @@ type Step = "onboarding" | "tips" | "taking" | "finished";
 
 function TwoHandsIcon({ className }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center justify-center gap-0.5 ${className ?? ""}`}>
+    <span
+      className={`inline-flex items-center justify-center gap-0.5 ${className ?? ""}`}
+    >
       <Hand className="w-[48%] h-full" strokeWidth={1.5} />
       <Hand className="w-[48%] h-full scale-x-[-1]" strokeWidth={1.5} />
     </span>
@@ -178,7 +180,9 @@ function OnboardingCard({ onNext }: { onNext: () => void }) {
         </p>
       </header>
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-gray-900">Hoe werkt het?</h2>
+        <h2 className="text-base font-semibold text-gray-900">
+          Hoe werkt het?
+        </h2>
         <ul className="list-disc list-inside text-sm text-gray-700 space-y-2 max-w-prose">
           <li>Je krijgt maximaal 10 korte &quot;foto-opdrachten&quot;.</li>
           <li>Maak een foto per opdracht en upload deze direct.</li>
@@ -215,7 +219,9 @@ function TipsScreen({ onStart }: { onStart: () => void }) {
               <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-wedding-light text-wedding-dark flex items-center justify-center p-2.5 sm:p-3">
                 <Icon className="w-6 h-6 sm:w-7 sm:h-7" strokeWidth={1.5} />
               </div>
-              <p className="text-sm text-gray-700 pt-1.5 sm:pt-2 flex-1">{text}</p>
+              <p className="text-sm text-gray-700 pt-1.5 sm:pt-2 flex-1">
+                {text}
+              </p>
             </li>
           );
         })}
@@ -651,7 +657,9 @@ function AccessGateScreen({
   const [code, setCode] = useState("");
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-[2rem] shadow-xl border-2 border-gray-200/80 p-8 text-center space-y-5">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">Scan de QR-code</h2>
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
+        Scan de QR-code
+      </h2>
       <p className="text-sm text-gray-700 max-w-prose mx-auto">
         Scan de QR-code op de trouwlocatie om toegang te krijgen.
       </p>

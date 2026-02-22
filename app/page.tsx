@@ -723,8 +723,8 @@ export default function WeddingPhotoPage() {
   }
 
   return (
-    <main className="min-h-screen bg-wedding-light flex flex-col items-center px-4 py-6">
-      <div className="w-full max-w-md space-y-6">
+    <main className="main-page bg-wedding-light flex flex-col items-center px-4 overflow-x-hidden">
+      <div className="scale-down-content w-full max-w-md space-y-6 flex flex-col items-center">
         {step === "onboarding" && (
           <OnboardingCard onNext={() => setStep("tips")} />
         )}
@@ -800,7 +800,14 @@ export default function WeddingPhotoPage() {
               )}
             </div>
             <div id="onboarding-stack" ref={stackRef}>
-              <PhotoStack printedUrls={printedUrls} />
+              <PhotoStack
+                printedUrls={printedUrls}
+                onCardClick={(photoIndex) => {
+                  setLightboxSlides(printedUrls.map((src) => ({ src })));
+                  setLightboxIndex(photoIndex);
+                  setLightboxOpen(true);
+                }}
+              />
             </div>
           </div>
         )}

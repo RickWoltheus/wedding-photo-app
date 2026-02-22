@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --page-padding-y: 1.5rem;
+  --page-padding-x: 1rem;
+}
+
+/* Equal top/bottom padding; respect safe area on notched devices */
+.main-page {
+  padding-top: max(var(--page-padding-y), env(safe-area-inset-top, 0px));
+  padding-bottom: max(var(--page-padding-y), env(safe-area-inset-bottom, 0px));
+  min-height: 100dvh;
+}
+
+/* Scale down slightly on short or narrow viewports so content fits */
+@media (max-height: 640px), (max-width: 360px) {
+  .scale-down-content {
+    transform: scale(0.88);
+    transform-origin: top center;
+  }
+}
+
+@media (max-height: 560px) {
+  .scale-down-content {
+    transform: scale(0.8);
+    transform-origin: top center;
+  }
+}

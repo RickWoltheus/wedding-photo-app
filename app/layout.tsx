@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NextStepWrapper from "./NextStepWrapper";
 
 export const metadata: Metadata = {
   title: "Foto's voor onze bruiloft",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <NextStepWrapper>{children}</NextStepWrapper>
+      </body>
     </html>
   );
 }

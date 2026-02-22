@@ -1,7 +1,18 @@
 "use client";
 
-import { Sun, Crosshair, Brush, Smartphone, Images, ChevronLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Brush, Crosshair, RotateCcw, Smartphone, Sun } from "lucide-react";
+import { motion } from "motion/react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useNextStep } from "nextstepjs";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 import Stack from "./components/Stack";
 
 type Prompt = {
@@ -11,15 +22,87 @@ type Prompt = {
 };
 
 const PROMPTS: Prompt[] = [
-  { id: "couple-wide", title: "Foto van ons samen", description: "Maak een foto van ons (het bruidspaar) vanaf de plek waar je nu staat." },
-  { id: "laughing-guest", title: "Iemand die lacht", description: "Maak een spontane foto van iemand die hardop lacht of een grote glimlach heeft." },
-  { id: "venue-wide", title: "De locatie", description: "Maak een overzichtsfoto van de trouwlocatie of de ruimte waar je nu bent." },
-  { id: "details", title: "Een mooi detail", description: "Zoom in op een detail dat jij mooi vindt (bloemen, ringen, decoratie, etc.)." },
-  { id: "table", title: "Jouw tafel", description: "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop)." },
-  { id: "dancefloor", title: "Dansvloer", description: "Maak een foto van de dansvloer of mensen die dansen." },
-  { id: "selfie-new", title: "Selfie met iemand nieuws", description: "Maak een selfie met iemand die je vandaag voor het eerst hebt ontmoet." },
-  { id: "candid-couple", title: "Onopvallende foto van ons", description: "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt)." },
+  {
+    id: "couple-wide",
+    title: "Foto van ons samen",
+    description:
+      "Maak een foto van ons (het bruidspaar) vanaf de plek waar je nu staat.",
+  },
+  {
+    id: "laughing-guest",
+    title: "Iemand die lacht",
+    description:
+      "Maak een spontane foto van iemand die hardop lacht of een grote glimlach heeft.",
+  },
+  {
+    id: "venue-wide",
+    title: "De locatie",
+    description:
+      "Maak een overzichtsfoto van de trouwlocatie of de ruimte waar je nu bent.",
+  },
+  {
+    id: "details",
+    title: "Een mooi detail",
+    description:
+      "Zoom in op een detail dat jij mooi vindt (bloemen, ringen, decoratie, etc.).",
+  },
+  {
+    id: "table",
+    title: "Jouw tafel",
+    description:
+      "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop).",
+  },
+  {
+    id: "dancefloor",
+    title: "Dansvloer",
+    description: "Maak een foto van de dansvloer of mensen die dansen.",
+  },
+  {
+    id: "selfie-new",
+    title: "Selfie met iemand nieuws",
+    description:
+      "Maak een selfie met iemand die je vandaag voor het eerst hebt ontmoet.",
+  },
+  {
+    id: "candid-couple",
+    title: "Onopvallende foto van ons",
+    description:
+      "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt).",
+  },
 ];
+
+const STACK_CARD_WIDTH = 268;
+const STACK_CARD_HEIGHT = 322; // real polaroid ~89x107mm ratio
+const STACK_MAX_WIDTH = 320;
+const POLAROID_PADDING = { top: 12, sides: 12, bottom: 28 };
+const PREVIEW_PEEK_PCT = 0.2;
+const STACK_SENSITIVITY = 200;
+const PRINT_SPRING_STIFFNESS = 120;
+const PRINT_SPRING_DAMPING = 18;
+const PREVIEW_PEEK_SPRING_STIFFNESS = 300;
+const PREVIEW_PEEK_SPRING_DAMPING = 30;
+
+function PolaroidFrame({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`w-full h-full bg-white ${className}`}
+      style={{
+        padding: `${POLAROID_PADDING.top}px ${POLAROID_PADDING.sides}px ${POLAROID_PADDING.bottom}px`,
+        boxSizing: "border-box",
+      }}
+    >
+      <div className="w-full h-full min-h-0 rounded-sm overflow-hidden">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -50,20 +133,34 @@ const TIP_ICONS = {
 };
 
 const TIPS: { key: keyof typeof TIP_ICONS; text: string }[] = [
-  { key: "light", text: "Zorg voor licht van voren (niet met een raam recht achter iemand)." },
-  { key: "focus", text: "Tik op het gezicht op je scherm om scherp te stellen." },
+  {
+    key: "light",
+    text: "Zorg voor licht van voren (niet met een raam recht achter iemand).",
+  },
+  {
+    key: "focus",
+    text: "Tik op het gezicht op je scherm om scherp te stellen.",
+  },
   { key: "lens", text: "Houd je lens even schoon met je trui of doekje." },
-  { key: "hands", text: "Houd je telefoon met twee handen voor een stabiele foto." },
+  {
+    key: "hands",
+    text: "Houd je telefoon met twee handen voor een stabiele foto.",
+  },
 ];
 
 function OnboardingCard({ onNext }: { onNext: () => void }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">Onze bruiloft</p>
-        <h1 className="text-2xl font-semibold text-gray-900">Help ons de dag vast te leggen</h1>
+        <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">
+          Onze bruiloft
+        </p>
+        <h1 className="text-2xl font-semibold text-gray-900">
+          Help ons de dag vast te leggen
+        </h1>
         <p className="text-sm text-gray-600">
-          We hebben geen officiële fotograaf. Jij kunt ons helpen door een paar speciale foto&apos;s te maken met je telefoon.
+          We hebben geen officiële fotograaf. Jij kunt ons helpen door een paar
+          speciale foto&apos;s te maken met je telefoon.
         </p>
       </header>
       <section className="space-y-3">
@@ -89,8 +186,12 @@ function TipsScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <header className="text-center space-y-1">
-        <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">Tips</p>
-        <h2 className="text-xl font-semibold text-gray-900">Mooie telefoonfoto&apos;s</h2>
+        <p className="text-sm font-medium text-wedding-dark uppercase tracking-wide">
+          Tips
+        </p>
+        <h2 className="text-xl font-semibold text-gray-900">
+          Mooie telefoonfoto&apos;s
+        </h2>
       </header>
       <ul className="space-y-4">
         {TIPS.map(({ key, text }) => {
@@ -113,213 +214,328 @@ function TipsScreen({ onStart }: { onStart: () => void }) {
         Start met foto&apos;s maken
       </button>
       <p className="text-xs text-gray-500 text-center">
-        Door verder te gaan, geef je toestemming om de foto&apos;s met ons te delen.
+        Door verder te gaan, geef je toestemming om de foto&apos;s met ons te
+        delen.
       </p>
     </div>
   );
 }
 
 function PhotoStack({
-  prompts,
-  previews,
-  onClose,
-  isModal,
+  printedUrls,
+  onCardClick,
 }: {
-  prompts: Prompt[];
-  previews: (string | null)[];
-  onClose?: () => void;
-  isModal?: boolean;
+  printedUrls: string[];
+  onCardClick?: (photoIndex: number) => void;
 }) {
-  const cards = useMemo(() => {
-    const n = prompts.length;
-    return prompts.map((_, reverseI) => {
-      const i = n - 1 - reverseI;
-      const prompt = prompts[i];
-      const url = previews[i];
-      if (url) {
-        return (
-          <img
-            key={i}
-            src={url}
-            alt=""
-            className="w-full h-full object-cover pointer-events-none"
-          />
-        );
-      }
-      return (
-        <div
-          key={i}
-          className="w-full h-full flex flex-col items-center justify-center p-6 bg-wedding-light text-gray-600 text-center"
-        >
-          <p className="text-sm font-medium text-wedding-dark">{prompt.title}</p>
-          <p className="text-xs mt-1">{prompt.description}</p>
-        </div>
-      );
-    });
-  }, [prompts, previews]);
+  const { cards, cardIndices } = useMemo(() => {
+    const cards = printedUrls.map((url, i) => (
+      <PolaroidFrame key={i}>
+        <img
+          src={url}
+          alt=""
+          className="w-full h-full object-cover pointer-events-none"
+        />
+      </PolaroidFrame>
+    ));
+    return { cards, cardIndices: cards.map((_, i) => i) };
+  }, [printedUrls]);
 
   return (
-    <div className="relative w-full" style={{ paddingTop: "100%", maxHeight: isModal ? "70vh" : undefined }}>
-      <div className="absolute inset-0 mx-auto flex items-center justify-center" style={{ maxWidth: 280 }}>
-        <div className="w-full h-full min-h-[280px]" style={{ width: 208, height: 280 }}>
+    <div className="relative w-full">
+      <div
+        className="mx-auto flex items-center justify-center"
+        style={{ maxWidth: STACK_MAX_WIDTH }}
+      >
+        <div
+          className="w-full"
+          style={{ width: STACK_CARD_WIDTH, height: STACK_CARD_HEIGHT }}
+        >
           <Stack
             randomRotation={false}
-            sensitivity={200}
-            sendToBackOnClick
+            sensitivity={STACK_SENSITIVITY}
+            sendToBackOnClick={!onCardClick}
             cards={cards}
+            cardIndices={cardIndices}
+            interactive={true}
+            onCardClick={onCardClick}
             autoplay={false}
-            autoplayDelay={3000}
             pauseOnHover={false}
           />
         </div>
       </div>
-      <div className="flex items-center justify-center gap-1 mt-3 text-wedding-dark">
-        <ChevronLeft className="w-5 h-5 flex-shrink-0" />
-        <span className="text-xs font-medium">Sleep of tik om door je foto&apos;s te bladeren</span>
-      </div>
-      {isModal && onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 w-full py-2 text-sm text-gray-600 hover:text-gray-900"
-        >
-          Sluiten
-        </button>
-      )}
     </div>
   );
 }
 
+function FlashOverlay({
+  flashOriginRef,
+}: {
+  flashOriginRef: React.RefObject<HTMLDivElement>;
+}) {
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = flashOriginRef.current;
+    if (!el) {
+      setOrigin({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+  }, [flashOriginRef]);
+
+  return (
+    <>
+      {origin && (
+        <motion.div
+          className="fixed z-[100] pointer-events-none rounded-full bg-white"
+          style={{
+            left: origin.x,
+            top: origin.y,
+            width: 24,
+            height: 24,
+            x: "-50%",
+            y: "-50%",
+          }}
+          initial={{ scale: 0, opacity: 0.95 }}
+          animate={{ scale: 8, opacity: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        />
+      )}
+      <motion.div
+        className="fixed inset-0 z-[99] pointer-events-none bg-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{ duration: 0.5, times: [0, 0.2, 1], ease: "easeOut" }}
+      />
+    </>
+  );
+}
+
+function PrintDropAnimation({
+  url,
+  onComplete,
+  wrapperRef,
+  cardRef,
+  stackRef,
+}: {
+  url: string;
+  onComplete: () => void;
+  wrapperRef: React.RefObject<HTMLElement | null>;
+  cardRef: React.RefObject<HTMLDivElement | null>;
+  stackRef: React.RefObject<HTMLElement | null>;
+}) {
+  const [layout, setLayout] = useState<{
+    top: number;
+    left: number;
+    endTop: number;
+    width: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!wrapperRef.current || !cardRef.current || !stackRef.current) return;
+    const wr = wrapperRef.current.getBoundingClientRect();
+    const cr = cardRef.current.getBoundingClientRect();
+    const sr = stackRef.current.getBoundingClientRect();
+    setLayout({
+      top: cr.top - wr.top,
+      left: cr.left - wr.left + (cr.width - STACK_CARD_WIDTH) / 2,
+      endTop: sr.top - wr.top,
+      width: STACK_CARD_WIDTH,
+    });
+  }, [url, wrapperRef, cardRef, stackRef]);
+
+  if (!layout) return null;
+
+  return (
+    <motion.div
+      className="absolute z-[5] rounded-2xl overflow-visible shadow-xl pointer-events-none bg-white"
+      style={{
+        width: layout.width,
+        height: STACK_CARD_HEIGHT,
+        left: layout.left,
+        top: layout.top,
+        padding: `${POLAROID_PADDING.top}px ${POLAROID_PADDING.sides}px ${POLAROID_PADDING.bottom}px`,
+        boxSizing: "border-box",
+      }}
+      initial={{ opacity: 0.95, scale: 0.98 }}
+      animate={{
+        top: layout.endTop,
+        opacity: 1,
+        scale: 1,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: PRINT_SPRING_STIFFNESS,
+        damping: PRINT_SPRING_DAMPING,
+      }}
+      onAnimationComplete={onComplete}
+    >
+      <div className="w-full h-full min-h-0 rounded-sm overflow-hidden">
+        <img src={url} alt="" className="w-full h-full object-cover" />
+      </div>
+    </motion.div>
+  );
+}
+
 function PromptFlow({
-  prompt,
   currentIndex,
   total,
+  assignmentTitle,
+  assignmentDescription,
   selectedFile,
-  previewUrl,
   onFileChange,
   onUpload,
+  onResetPhoto,
   isUploading,
   uploadError,
-  onOpenStack,
+  flashOriginRef,
 }: {
-  prompt: Prompt;
   currentIndex: number;
   total: number;
+  assignmentTitle: string;
+  assignmentDescription: string;
   selectedFile: File | null;
-  previewUrl: string | null;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUpload: () => void;
+  onResetPhoto?: () => void;
   isUploading: boolean;
   uploadError: string | null;
-  onOpenStack: () => void;
+  flashOriginRef?: React.RefObject<HTMLDivElement>;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
-      <header className="space-y-1">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-medium text-wedding-dark uppercase tracking-wide">
-              Opdracht {currentIndex + 1} van {total}
-            </p>
-            <h2 className="text-xl font-semibold text-gray-900">{prompt.title}</h2>
-            <p className="text-sm text-gray-700">{prompt.description}</p>
+    <div className="relative z-10 w-full max-w-[280px] mx-auto">
+      {/* Instax-style camera body */}
+      <div className="rounded-[2rem] bg-gradient-to-b from-white to-gray-100 shadow-xl border-2 border-gray-200/80 overflow-hidden">
+        {/* Top: lens + viewfinder (flash origin) */}
+        <div className="pt-6 pb-2 px-6 flex flex-col items-center">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 shadow-inner flex items-center justify-center ring-4 ring-gray-400/50">
+              <div className="w-10 h-10 rounded-full bg-gray-900/80" />
+            </div>
+            <div
+              ref={flashOriginRef}
+              className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gray-600 shadow"
+              title="viewfinder"
+            />
           </div>
-          <button
-            type="button"
-            onClick={onOpenStack}
-            className="flex-shrink-0 p-2 rounded-xl bg-wedding-light text-wedding-dark hover:bg-wedding transition-colors"
-            title="Bekijk foto's"
-          >
-            <Images className="w-5 h-5" />
-          </button>
         </div>
-      </header>
-      <section className="space-y-4">
-        {selectedFile && previewUrl ? (
-          <div className="space-y-3">
-            <img src={previewUrl} alt="Preview" className="w-full rounded-xl object-cover aspect-[4/3] bg-gray-100" />
-            <label className="block w-full text-center rounded-full border border-gray-300 text-gray-700 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50">
-              Opnieuw
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
-            </label>
+        {/* Label strip (like instax film area) */}
+        <div className="px-4 py-2 bg-wedding-light border-y border-gray-200/60">
+          <p className="text-[10px] font-semibold text-wedding-dark uppercase tracking-widest text-center">
+            Opdracht {currentIndex + 1} van {total}
+          </p>
+        </div>
+        {/* Assignment on body */}
+        <div id="onboarding-assignment" className="px-5 py-4 text-center space-y-1 min-h-[72px]">
+          <p className="text-sm font-semibold text-gray-900">{assignmentTitle}</p>
+          <p className="text-xs text-gray-600 leading-snug">{assignmentDescription}</p>
+        </div>
+        {/* Photo exit slot + shutter button — fixed height so layout doesn't shift */}
+        <div className="px-5 pb-5 pt-2">
+          <div id="onboarding-maak-foto" className="rounded-xl bg-gray-800/90 py-3 px-4 border-2 border-gray-700 shadow-inner min-h-[88px] flex flex-col items-center justify-center">
+            {selectedFile ? (
+              <div className="w-full flex items-center justify-center gap-2">
+                {onResetPhoto && (
+                  <button
+                    type="button"
+                    onClick={onResetPhoto}
+                    disabled={isUploading}
+                    className="flex-shrink-0 p-2 rounded-full bg-white/20 text-white hover:bg-white/30 disabled:opacity-50 transition-colors"
+                    title="Foto opnieuw nemen"
+                    aria-label="Foto opnieuw nemen"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onUpload}
+                  disabled={isUploading}
+                  className="flex-1 min-w-0 inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-2.5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-wedding transition-colors"
+                >
+                  {isUploading ? "Uploaden..." : "Upload en print"}
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center cursor-pointer w-full min-h-[52px]">
+                <span className="inline-flex items-center justify-center rounded-full bg-white text-gray-900 w-14 h-14 text-sm font-semibold shadow-md hover:bg-gray-100 active:scale-95 transition-all border-2 border-gray-200 text-center">
+                  Maak foto
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={onFileChange}
+                />
+              </label>
+            )}
           </div>
-        ) : (
-          <div className="border border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-3">
-            <p className="text-sm text-gray-700">Maak nu een foto voor deze opdracht.</p>
-            <p className="text-xs text-gray-500">Je camera wordt alleen gebruikt om deze foto te maken.</p>
-            <label className="inline-flex items-center justify-center rounded-full bg-gray-900 text-white px-4 py-2 text-sm font-medium cursor-pointer hover:bg-gray-800">
-              Maak een foto
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
-            </label>
-          </div>
-        )}
-        {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-      </section>
-      <button
-        type="button"
-        onClick={onUpload}
-        disabled={!selectedFile || isUploading}
-        className="w-full inline-flex items-center justify-center rounded-full bg-wedding-dark text-white py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-wedding transition-colors"
-      >
-        {isUploading ? "Uploaden..." : "Upload foto en ga verder"}
-      </button>
-      <p className="text-xs text-gray-500 text-center">
-        Geen zin meer? Je kunt het scherm altijd sluiten, we zijn je al dankbaar!
-      </p>
+          {uploadError && (
+            <p className="text-xs text-red-600 text-center mt-2">{uploadError}</p>
+          )}
+          <p className="text-[10px] text-gray-500 text-center mt-3">
+            Geen zin meer? Sluit het scherm.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
 function FinishedScreen({
-  prompts,
-  previews,
+  printedUrls,
   email,
   selfDescription,
   onEmailChange,
   onSelfDescriptionChange,
   onSubmitEmail,
   emailSubmitted,
-  onOpenStack,
+  onPolaroidClick,
 }: {
-  prompts: Prompt[];
-  previews: (string | null)[];
+  printedUrls: string[];
   email: string;
   selfDescription: string;
   onEmailChange: (v: string) => void;
   onSelfDescriptionChange: (v: string) => void;
   onSubmitEmail: (e: React.FormEvent) => void;
   emailSubmitted: boolean;
-  onOpenStack: () => void;
+  onPolaroidClick?: (photoIndex: number) => void;
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <header className="space-y-2 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900">Dankjewel voor je foto&apos;s!</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Dankjewel voor je foto&apos;s!
+        </h2>
         <p className="text-sm text-gray-700">
-          Jij hebt meegeholpen om onze dag vast te leggen. Dat waarderen we enorm.
+          Jij hebt meegeholpen om onze dag vast te leggen. Dat waarderen we
+          enorm.
         </p>
       </header>
       <section>
-        <PhotoStack prompts={prompts} previews={previews} />
-        <button
-          type="button"
-          onClick={onOpenStack}
-          className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-wedding text-wedding-dark text-sm font-medium hover:bg-wedding-light"
-        >
-          <Images className="w-4 h-4" />
-          Alle foto&apos;s bekijken
-        </button>
+        <PhotoStack
+          printedUrls={printedUrls}
+          onCardClick={onPolaroidClick}
+        />
       </section>
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-900 text-center">Foto&apos;s van jezelf ontvangen?</h3>
+        <h3 className="text-sm font-semibold text-gray-900 text-center">
+          Foto&apos;s van jezelf ontvangen?
+        </h3>
         {emailSubmitted ? (
           <p className="text-sm text-green-700 text-center">
-            Dankjewel! We gebruiken je e-mailadres om later foto&apos;s van jou te delen.
+            Dankjewel! We gebruiken je e-mailadres om later foto&apos;s van jou
+            te delen.
           </p>
         ) : (
           <form className="space-y-3" onSubmit={onSubmitEmail}>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">E-mailadres (optioneel)</label>
+              <label className="text-xs font-medium text-gray-700">
+                E-mailadres (optioneel)
+              </label>
               <input
                 type="email"
                 value={email}
@@ -329,7 +545,9 @@ function FinishedScreen({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">Hoe herken je jou op de foto? (optioneel)</label>
+              <label className="text-xs font-medium text-gray-700">
+                Hoe herken je jou op de foto? (optioneel)
+              </label>
               <textarea
                 value={selfDescription}
                 onChange={(e) => onSelfDescriptionChange(e.target.value)}
@@ -344,7 +562,9 @@ function FinishedScreen({
             >
               Verstuur
             </button>
-            <p className="text-xs text-gray-500 text-center">We gebruiken je gegevens alleen om foto&apos;s met jou te delen.</p>
+            <p className="text-xs text-gray-500 text-center">
+              We gebruiken je gegevens alleen om foto&apos;s met jou te delen.
+            </p>
           </form>
         )}
       </section>
@@ -363,15 +583,26 @@ export default function WeddingPhotoPage() {
   const [email, setEmail] = useState("");
   const [selfDescription, setSelfDescription] = useState("");
   const [emailSubmitted, setEmailSubmitted] = useState(false);
-  const [uploadedPreviews, setUploadedPreviews] = useState<(string | null)[]>([]);
-  const [stackModalOpen, setStackModalOpen] = useState(false);
+  const [printedUrls, setPrintedUrls] = useState<string[]>([]);
+  const [printingPhoto, setPrintingPhoto] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSlides, setLightboxSlides] = useState<{ src: string }[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [flash, setFlash] = useState(false);
+  const takingSectionRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const stackRef = useRef<HTMLDivElement>(null);
+  const flashOriginRef = useRef<HTMLDivElement>(null);
   const storedUrlsRef = useRef<string[]>([]);
+  const takingTourShownRef = useRef(false);
+  const stackTourShownRef = useRef(false);
+  const previewTourShownRef = useRef(false);
+  const { startNextStep } = useNextStep();
 
-  const promptsForSession = useMemo(() => shuffleArray(PROMPTS).slice(0, 10), []);
-
-  useEffect(() => {
-    setUploadedPreviews((prev) => (prev.length === promptsForSession.length ? prev : new Array(promptsForSession.length).fill(null)));
-  }, [promptsForSession.length]);
+  const promptsForSession = useMemo(
+    () => shuffleArray(PROMPTS).slice(0, 10),
+    [],
+  );
 
   useEffect(() => {
     setSessionId(getSessionId());
@@ -400,11 +631,47 @@ export default function WeddingPhotoPage() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      setFlash(true);
       setSelectedFile(file);
       setUploadError(null);
     }
     e.target.value = "";
   }
+
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(false), 450);
+    return () => clearTimeout(t);
+  }, [flash]);
+
+  useEffect(() => {
+    if (step !== "taking" || takingTourShownRef.current) return;
+    takingTourShownRef.current = true;
+    const t = setTimeout(() => startNextStep("takingTour"), 400);
+    return () => clearTimeout(t);
+  }, [step, startNextStep]);
+
+  useEffect(() => {
+    if (step !== "taking" || printedUrls.length < 2 || stackTourShownRef.current) return;
+    stackTourShownRef.current = true;
+    const t = setTimeout(() => startNextStep("stackTour"), 500);
+    return () => clearTimeout(t);
+  }, [step, printedUrls.length, startNextStep]);
+
+  useEffect(() => {
+    if (!selectedFile || previewTourShownRef.current) return;
+    previewTourShownRef.current = true;
+    const t = setTimeout(() => startNextStep("previewTour"), 600);
+    return () => clearTimeout(t);
+  }, [selectedFile, startNextStep]);
+
+  const handlePrintComplete = useCallback(() => {
+    if (!printingPhoto) return;
+    setPrintedUrls((prev) => [...prev, printingPhoto]);
+    setPrintingPhoto(null);
+    if (currentIndex + 1 >= promptsForSession.length) setStep("finished");
+    else setCurrentIndex((i) => i + 1);
+  }, [printingPhoto, currentIndex, promptsForSession.length]);
 
   async function handleUpload() {
     if (!selectedFile || !currentPrompt) return;
@@ -416,21 +683,19 @@ export default function WeddingPhotoPage() {
       formData.append("file", selectedFile);
       formData.append("sessionId", sessionId);
       formData.append("promptId", currentPrompt.id);
-      const res = await fetch("/api/upload-photo", { method: "POST", body: formData });
+      const res = await fetch("/api/upload-photo", {
+        method: "POST",
+        body: formData,
+      });
       if (!res.ok) throw new Error("Upload mislukt");
       const url = URL.createObjectURL(fileToStore);
       storedUrlsRef.current.push(url);
-      setUploadedPreviews((prev) => {
-        const next = [...prev];
-        if (next.length !== promptsForSession.length) return next;
-        next[currentIndex] = url;
-        return next;
-      });
       setSelectedFile(null);
-      if (currentIndex + 1 >= promptsForSession.length) setStep("finished");
-      else setCurrentIndex((i) => i + 1);
+      setPrintingPhoto(url);
     } catch {
-      setUploadError("Er ging iets mis bij het uploaden. Probeer het nog een keer.");
+      setUploadError(
+        "Er ging iets mis bij het uploaden. Probeer het nog een keer.",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -443,7 +708,11 @@ export default function WeddingPhotoPage() {
         const res = await fetch("/api/register-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId, email: email.trim(), selfDescription }),
+          body: JSON.stringify({
+            sessionId,
+            email: email.trim(),
+            selfDescription,
+          }),
         });
         if (!res.ok) throw new Error("error");
       } catch {
@@ -455,56 +724,109 @@ export default function WeddingPhotoPage() {
 
   return (
     <main className="min-h-screen bg-wedding-light flex flex-col items-center px-4 py-6">
-      <div className="w-full max-w-md">
-        {step === "onboarding" && <OnboardingCard onNext={() => setStep("tips")} />}
+      <div className="w-full max-w-md space-y-6">
+        {step === "onboarding" && (
+          <OnboardingCard onNext={() => setStep("tips")} />
+        )}
         {step === "tips" && <TipsScreen onStart={() => setStep("taking")} />}
         {step === "taking" && currentPrompt && (
-          <PromptFlow
-            prompt={currentPrompt}
-            currentIndex={currentIndex}
-            total={promptsForSession.length}
-            selectedFile={selectedFile}
-            previewUrl={previewUrl}
-            onFileChange={handleFileChange}
-            onUpload={handleUpload}
-            isUploading={isUploading}
-            uploadError={uploadError}
-            onOpenStack={() => setStackModalOpen(true)}
-          />
+          <div ref={takingSectionRef} className="relative space-y-6">
+            {/* Full-screen flash: burst from camera then full white, animate back */}
+            {flash && (
+              <FlashOverlay flashOriginRef={flashOriginRef} />
+            )}
+            <div className="absolute left-0 top-0 w-0 h-0 overflow-visible pointer-events-none">
+              {printingPhoto && (
+                <PrintDropAnimation
+                  url={printingPhoto}
+                  onComplete={handlePrintComplete}
+                  wrapperRef={takingSectionRef}
+                  cardRef={cardRef}
+                  stackRef={stackRef}
+                />
+              )}
+            </div>
+            <div ref={cardRef} className="relative z-10">
+              <PromptFlow
+                currentIndex={currentIndex}
+                total={promptsForSession.length}
+                assignmentTitle={currentPrompt.title}
+                assignmentDescription={currentPrompt.description}
+                selectedFile={selectedFile}
+                onFileChange={handleFileChange}
+                onUpload={handleUpload}
+                onResetPhoto={() => setSelectedFile(null)}
+                isUploading={isUploading}
+                uploadError={uploadError}
+                flashOriginRef={flashOriginRef}
+              />
+              {selectedFile && previewUrl && (
+                <>
+                  <motion.div
+                    id="onboarding-preview"
+                    className="absolute left-1/2 top-full overflow-visible cursor-pointer -translate-x-1/2"
+                    style={{ width: STACK_CARD_WIDTH, height: STACK_CARD_HEIGHT }}
+                    initial={{ height: 0 }}
+                    animate={{ height: STACK_CARD_HEIGHT * PREVIEW_PEEK_PCT }}
+                    transition={{
+                      type: "spring",
+                      stiffness: PREVIEW_PEEK_SPRING_STIFFNESS,
+                      damping: PREVIEW_PEEK_SPRING_DAMPING,
+                    }}
+                    onClick={() => {
+                      setLightboxSlides([{ src: previewUrl }]);
+                      setLightboxIndex(0);
+                      setLightboxOpen(true);
+                    }}
+                  >
+                    <div
+                      className="absolute left-0 bottom-0 rounded-2xl overflow-hidden shadow-xl bg-white box-border"
+                      style={{
+                        width: STACK_CARD_WIDTH,
+                        height: STACK_CARD_HEIGHT,
+                        padding: `${POLAROID_PADDING.top}px ${POLAROID_PADDING.sides}px ${POLAROID_PADDING.bottom}px`,
+                      }}
+                    >
+                      <div className="w-full h-full min-h-0 rounded-sm overflow-hidden">
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover object-bottom"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </div>
+            <div id="onboarding-stack" ref={stackRef}>
+              <PhotoStack printedUrls={printedUrls} />
+            </div>
+          </div>
         )}
         {step === "finished" && (
           <FinishedScreen
-            prompts={promptsForSession}
-            previews={uploadedPreviews.length === promptsForSession.length ? uploadedPreviews : new Array(promptsForSession.length).fill(null)}
+            printedUrls={printedUrls}
             email={email}
             selfDescription={selfDescription}
             onEmailChange={setEmail}
             onSelfDescriptionChange={setSelfDescription}
             onSubmitEmail={handleSubmitEmail}
             emailSubmitted={emailSubmitted}
-            onOpenStack={() => setStackModalOpen(true)}
+            onPolaroidClick={(photoIndex) => {
+              setLightboxSlides(printedUrls.map((src) => ({ src })));
+              setLightboxIndex(photoIndex);
+              setLightboxOpen(true);
+            }}
           />
         )}
       </div>
-      {stackModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-          onClick={() => setStackModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-xl max-w-sm w-full max-h-[90vh] overflow-y-auto p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-4">Jouw foto&apos;s</h3>
-            <PhotoStack
-              prompts={promptsForSession}
-              previews={uploadedPreviews.length === promptsForSession.length ? uploadedPreviews : new Array(promptsForSession.length).fill(null)}
-              isModal
-              onClose={() => setStackModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxSlides}
+        index={lightboxIndex}
+      />
     </main>
   );
 }

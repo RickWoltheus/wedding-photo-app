@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useTransform } from "motion/react";
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 
 function CardRotate({
   children,
@@ -61,26 +61,43 @@ type StackProps = {
   randomRotation?: boolean;
   sensitivity?: number;
   cards?: ReactNode[];
+  /** Indices for each card (e.g. prompt index). Passed to onCardClick. */
+  cardIndices?: number[];
   animationConfig?: { stiffness: number; damping: number };
   sendToBackOnClick?: boolean;
+  /** When false, drag and click-to-cycle are disabled. */
+  interactive?: boolean;
+  /** When set, tap calls this with card index instead of sending to back. */
+  onCardClick?: (cardIndex: number) => void;
   autoplay?: boolean;
   autoplayDelay?: number;
   pauseOnHover?: boolean;
   mobileClickOnly?: boolean;
   mobileBreakpoint?: number;
+  /** After this many ms, send the top card to the back once. Use with triggerAutoSend. */
+  autoSendTopToBackAfterMs?: number;
+  /** When true, schedule the one-shot auto send. Parent should set false in onAutoSendComplete. */
+  triggerAutoSend?: boolean;
+  onAutoSendComplete?: () => void;
 };
 
 export default function Stack({
   randomRotation = false,
   sensitivity = 200,
   cards = [],
+  cardIndices,
   animationConfig = { stiffness: 260, damping: 20 },
   sendToBackOnClick = false,
+  interactive = true,
+  onCardClick,
   autoplay = false,
   autoplayDelay = 3000,
   pauseOnHover = false,
   mobileClickOnly = false,
   mobileBreakpoint = 768,
+  autoSendTopToBackAfterMs,
+  triggerAutoSend = false,
+  onAutoSendComplete,
 }: StackProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -94,18 +111,42 @@ export default function Stack({
     return () => window.removeEventListener("resize", checkMobile);
   }, [mobileBreakpoint]);
 
-  const shouldDisableDrag = mobileClickOnly && isMobile;
-  const shouldEnableClick = sendToBackOnClick || shouldDisableDrag;
+  const shouldDisableDrag = !interactive || (mobileClickOnly && isMobile);
+  const shouldCycleOnClick = interactive && (sendToBackOnClick || (mobileClickOnly && isMobile)) && !onCardClick;
+  const shouldOpenOnClick = interactive && onCardClick;
+  const onAutoSendCompleteRef = useRef(onAutoSendComplete);
+  onAutoSendCompleteRef.current = onAutoSendComplete;
+  const skipTransitionRef = useRef(false);
 
-  const [stack, setStack] = useState<{ id: number; content: ReactNode }[]>(() =>
-    cards.length ? cards.map((content, index) => ({ id: index + 1, content })) : []
+  const [stack, setStack] = useState<{ id: number; content: ReactNode; promptIndex: number }[]>(() =>
+    cards.length
+      ? cards.map((content, index) => ({
+          id: index + 1,
+          content,
+          promptIndex: cardIndices?.[index] ?? index,
+        }))
+      : []
   );
 
   useEffect(() => {
     if (cards.length) {
-      setStack(cards.map((content, index) => ({ id: index + 1, content })));
+      setStack((prev) => {
+        const next = cards.map((content, index) => ({
+          id: index + 1,
+          content,
+          promptIndex: cardIndices?.[index] ?? index,
+        }));
+        if (next.length === prev.length && prev.length > 0) {
+          skipTransitionRef.current = true;
+        }
+        return next;
+      });
     }
-  }, [cards]);
+  }, [cards, cardIndices]);
+
+  useEffect(() => {
+    if (skipTransitionRef.current) skipTransitionRef.current = false;
+  }, [stack]);
 
   const sendToBack = (id: number) => {
     setStack((prev) => {
@@ -127,6 +168,17 @@ export default function Stack({
     }
   }, [autoplay, autoplayDelay, stack, isPaused]);
 
+  useEffect(() => {
+    if (triggerAutoSend && autoSendTopToBackAfterMs != null && cards.length > 0) {
+      const topId = cards.length;
+      const t = setTimeout(() => {
+        sendToBack(topId);
+        onAutoSendCompleteRef.current?.();
+      }, autoSendTopToBackAfterMs);
+      return () => clearTimeout(t);
+    }
+  }, [triggerAutoSend, autoSendTopToBackAfterMs, cards.length]);
+
   if (!stack.length) return null;
 
   return (
@@ -147,18 +199,25 @@ export default function Stack({
           >
             <motion.div
               className="rounded-2xl overflow-hidden w-full h-full shadow-xl bg-white"
-              onClick={() => shouldEnableClick && sendToBack(card.id)}
+              onClick={() => {
+                if (shouldOpenOnClick) onCardClick?.(card.promptIndex);
+                else if (shouldCycleOnClick) sendToBack(card.id);
+              }}
               animate={{
                 rotateZ: (stack.length - index - 1) * 4 + randomRotate,
-                scale: 1 + index * 0.06 - stack.length * 0.06,
+                scale: 1 + (index - stack.length + 1) * 0.06,
                 transformOrigin: "90% 90%",
               }}
               initial={false}
-              transition={{
-                type: "spring",
-                stiffness: animationConfig.stiffness,
-                damping: animationConfig.damping,
-              }}
+              transition={
+                skipTransitionRef.current
+                  ? { duration: 0 }
+                  : {
+                      type: "spring",
+                      stiffness: animationConfig.stiffness,
+                      damping: animationConfig.damping,
+                    }
+              }
             >
               {card.content}
             </motion.div>

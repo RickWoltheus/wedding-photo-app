@@ -55,9 +55,10 @@ const PROMPTS: Prompt[] = [
       "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop).",
   },
   {
-    id: "dancefloor",
-    title: "Dansvloer",
-    description: "Maak een foto van de dansvloer of mensen die dansen.",
+    id: "beautiful-moment",
+    title: "Een mooi moment",
+    description:
+      "Leg een mooi of bijzonder moment vast dat je ziet gebeuren.",
   },
   {
     id: "selfie-new",
@@ -70,6 +71,12 @@ const PROMPTS: Prompt[] = [
     title: "Onopvallende foto van ons",
     description:
       "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt).",
+  },
+  {
+    id: "food-drinks",
+    title: "Het eten",
+    description:
+      "Maak een foto van het eten of drinken dat je het lekkerst vindt.",
   },
 ];
 
@@ -123,6 +130,35 @@ function getSessionId(): string {
   const newId = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   window.localStorage.setItem(key, newId);
   return newId;
+}
+
+const PROGRESS_KEY = "wedding-photo-progress";
+
+type SavedProgress = {
+  promptIds: string[];
+  currentIndex: number;
+  step: Step;
+  photosUploaded: number;
+};
+
+function loadProgress(): SavedProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SavedProgress;
+  } catch {
+    return null;
+  }
+}
+
+function saveProgress(progress: SavedProgress): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch {
+    // storage full or unavailable
+  }
 }
 
 type Step = "onboarding" | "tips" | "taking" | "finished";
@@ -408,6 +444,7 @@ function PromptFlow({
   onFileChange,
   onUpload,
   onResetPhoto,
+  onSkip,
   isUploading,
   uploadError,
   flashOriginRef,
@@ -420,6 +457,7 @@ function PromptFlow({
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUpload: () => void;
   onResetPhoto?: () => void;
+  onSkip?: () => void;
   isUploading: boolean;
   uploadError: string | null;
   flashOriginRef?: React.RefObject<HTMLDivElement>;
@@ -509,7 +547,18 @@ function PromptFlow({
             </p>
           )}
           <p className="text-[10px] text-gray-500 text-center mt-3">
-            Geen zin meer? Sluit het scherm.
+            {onSkip ? (
+              <button
+                type="button"
+                onClick={onSkip}
+                disabled={isUploading}
+                className="underline hover:text-gray-700 disabled:opacity-50 transition-colors"
+              >
+                Sla deze opdracht over
+              </button>
+            ) : (
+              "Geen zin meer? Sluit het scherm."
+            )}
           </p>
         </div>
       </div>
@@ -723,14 +772,39 @@ function WeddingPhotoPage() {
   const previewTourShownRef = useRef(false);
   const { startNextStep } = useNextStep();
 
-  const promptsForSession = useMemo(
-    () => shuffleArray(PROMPTS).slice(0, 10),
-    [],
-  );
+  const promptsForSession = useMemo(() => {
+    const saved = loadProgress();
+    if (saved) {
+      // Restore the same prompt order from the saved session
+      const byId = new Map(PROMPTS.map((p) => [p.id, p]));
+      const restored = saved.promptIds
+        .map((id) => byId.get(id))
+        .filter((p): p is Prompt => p !== undefined);
+      if (restored.length > 0) return restored;
+    }
+    return shuffleArray(PROMPTS).slice(0, 10);
+  }, []);
 
   useEffect(() => {
     setSessionId(getSessionId());
+    // Restore progress from localStorage
+    const saved = loadProgress();
+    if (saved) {
+      setCurrentIndex(saved.currentIndex);
+      setStep(saved.step);
+    }
   }, []);
+
+  // Save progress whenever it changes
+  useEffect(() => {
+    if (promptsForSession.length === 0) return;
+    saveProgress({
+      promptIds: promptsForSession.map((p) => p.id),
+      currentIndex,
+      step,
+      photosUploaded: printedUrls.length,
+    });
+  }, [promptsForSession, currentIndex, step, printedUrls.length]);
 
   useEffect(() => {
     const codeFromUrl = searchParams.get("code");
@@ -847,6 +921,16 @@ function WeddingPhotoPage() {
     else setCurrentIndex((i) => i + 1);
   }, [printingPhoto, currentIndex, promptsForSession.length]);
 
+  function handleSkip() {
+    setSelectedFile(null);
+    setUploadError(null);
+    if (currentIndex + 1 >= promptsForSession.length) {
+      setStep("finished");
+    } else {
+      setCurrentIndex((i) => i + 1);
+    }
+  }
+
   async function handleUpload() {
     if (!selectedFile || !currentPrompt) return;
     const fileToStore = selectedFile;
@@ -949,6 +1033,7 @@ function WeddingPhotoPage() {
                 onFileChange={handleFileChange}
                 onUpload={handleUpload}
                 onResetPhoto={() => setSelectedFile(null)}
+                onSkip={handleSkip}
                 isUploading={isUploading}
                 uploadError={uploadError}
                 flashOriginRef={flashOriginRef}

@@ -55,9 +55,10 @@ const PROMPTS: Prompt[] = [
       "Maak een foto van jouw tafel (alle mensen aan je tafel mogen erop).",
   },
   {
-    id: "dancefloor",
-    title: "Dansvloer",
-    description: "Maak een foto van de dansvloer of mensen die dansen.",
+    id: "beautiful-moment",
+    title: "Een mooi moment",
+    description:
+      "Leg een mooi of bijzonder moment vast dat je ziet gebeuren.",
   },
   {
     id: "selfie-new",
@@ -70,6 +71,12 @@ const PROMPTS: Prompt[] = [
     title: "Onopvallende foto van ons",
     description:
       "Maak een foto van ons zonder dat we er speciaal voor poseren (als dat lukt).",
+  },
+  {
+    id: "food-drinks",
+    title: "Het eten",
+    description:
+      "Maak een foto van het eten of drinken dat je het lekkerst vindt.",
   },
 ];
 
